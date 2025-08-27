@@ -1,26 +1,77 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* FitScore Color Palette */
+  --primary-blue: #0020ff;
+  --light-blue: #4b6fff;
+  --white: #ffffff;
+  --navy-blue: #0b007c;
+  --light-gray: #f0f0f0;
+  --dark-blue: #001966;
+  
+  --background: var(--white);
+  --foreground: var(--dark-blue);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-primary: var(--primary-blue);
+  --color-secondary: var(--light-blue);
+  --color-accent: var(--navy-blue);
+  --color-light: var(--light-gray);
+  --color-dark: var(--dark-blue);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Custom utility classes for FitScore */
+.bg-primary {
+  background-color: var(--primary-blue);
+}
+
+.bg-secondary {
+  background-color: var(--light-blue);
+}
+
+.bg-accent {
+  background-color: var(--navy-blue);
+}
+
+.bg-light {
+  background-color: var(--light-gray);
+}
+
+.text-primary {
+  color: var(--primary-blue);
+}
+
+.text-secondary {
+  color: var(--light-blue);
+}
+
+.text-accent {
+  color: var(--navy-blue);
+}
+
+.text-dark {
+  color: var(--dark-blue);
+}
+
+.border-primary {
+  border-color: var(--primary-blue);
+}
+
+.border-secondary {
+  border-color: var(--light-blue);
+}
+
+.border-accent {
+  border-color: var(--navy-blue);
 }

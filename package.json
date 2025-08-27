@@ -2,11 +2,15 @@
   "name": "fitscore-next-ts-frontend",
   "version": "0.1.0",
   "private": true,
+  "description": "AI-powered hiring co-pilot and People Analytics tool",
+  "keywords": ["hiring", "ai", "recruitment", "analytics", "nextjs", "typescript"],
+  "author": "FitScore Team",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "react": "19.1.0",
@@ -23,5 +27,9 @@
     "eslint": "^9",
     "eslint-config-next": "15.5.2",
     "@eslint/eslintrc": "^3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
   }
 }
