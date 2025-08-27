@@ -1,66 +1,51 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
-import { useJobs } from '@/contexts/JobsContext';
-import { useCandidates } from '@/contexts/CandidatesContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { JobPosting, Candidate } from '@/types';
-import { formatDate, getFitScoreColor, getFitScoreLabel } from '@/utils';
+import { useParams } from 'next/navigation';
+import { JobPosting } from '@/types';
+import { ApplicationLink } from '@/components';
 
-export default function JobDetailsPage() {
-  const router = useRouter();
+export default function JobDetailPage() {
   const params = useParams();
   const jobId = params.id as string;
   
-  const { user, isAuthenticated, logout } = useAuth();
-  const { jobs, isLoading: jobsLoading, getJobById } = useJobs();
-  const { candidates, isLoading: candidatesLoading, fetchCandidates, calculateFitScore } = useCandidates();
-  
   const [job, setJob] = useState<JobPosting | null>(null);
-  const [jobCandidates, setJobCandidates] = useState<Candidate[]>([]);
-  const [activeTab, setActiveTab] = useState<'overview' | 'candidates'>('overview');
-
-  // Check for tab parameter in URL
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const tabParam = urlParams.get('tab');
-    if (tabParam === 'candidates') {
-      setActiveTab('candidates');
-    }
-  }, []);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadJobData = async () => {
-      if (jobId) {
-        const foundJob = await getJobById(jobId);
-        setJob(foundJob);
-        fetchCandidates(jobId);
-      }
+    // TODO: Fetch job details from API
+    // For now, using mock data
+    const mockJob: JobPosting = {
+      id: jobId,
+      title: 'Senior Software Engineer',
+      description: 'We are looking for a talented Senior Software Engineer to join our team...',
+      performance: {
+        experience: '5+ years of experience in software development',
+        deliveries: 'Ability to deliver high-quality code on time',
+        skills: ['React', 'Node.js', 'TypeScript', 'PostgreSQL']
+      },
+      energy: {
+        availability: 'Full-time, remote-friendly',
+        deadlines: 'Agile environment with 2-week sprints',
+        pressure: 'Fast-paced startup environment'
+      },
+      culture: {
+        legalValues: ['Innovation', 'Collaboration', 'Excellence', 'Integrity']
+      },
+      applicationLink: `${window.location.origin}/apply/${jobId}`,
+      status: 'published',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
     };
     
-    loadJobData();
-  }, [jobId, getJobById, fetchCandidates]);
+    setJob(mockJob);
+    setLoading(false);
+  }, [jobId]);
 
-  useEffect(() => {
-    if (candidates.length > 0 && job) {
-      const filteredCandidates = candidates.filter(candidate => candidate.jobId === job.id);
-      setJobCandidates(filteredCandidates);
-    }
-  }, [candidates, job]);
-
-  if (!isAuthenticated) {
-    router.push('/login');
-    return null;
-  }
-
-  if (jobsLoading || candidatesLoading) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-light flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-dark">Loading job details...</p>
-        </div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -69,195 +54,102 @@ export default function JobDetailsPage() {
     return (
       <div className="min-h-screen bg-light flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-dark mb-4">Job Not Found</h2>
-          <p className="text-gray-600 mb-6">The job you're looking for doesn't exist or has been removed.</p>
-          <button
-            onClick={() => router.push('/jobs')}
-            className="bg-primary text-white px-6 py-3 rounded-lg hover:bg-secondary transition-colors"
-          >
-            Back to Jobs
-          </button>
+          <h1 className="text-2xl font-bold text-dark mb-2">Job Not Found</h1>
+          <p className="text-gray-600">The job posting you're looking for doesn't exist.</p>
         </div>
       </div>
     );
   }
 
-  const handleViewCandidate = (candidate: Candidate) => {
-    router.push(`/candidates/${candidate.id}`);
-  };
-
-  const handleCalculateFitScore = async (candidateId: string) => {
-    await calculateFitScore(candidateId, job.id);
-  };
-
-  const handleEditJob = () => {
-    router.push(`/jobs/${job.id}/edit`);
-  };
-
-  const handleBackToJobs = () => {
-    router.push('/jobs');
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'published':
-        return 'bg-green-100 text-green-800';
-      case 'draft':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'closed':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-light">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={handleBackToJobs}
-                className="text-primary hover:text-secondary transition-colors"
-              >
-                ← Back to Jobs
-              </button>
-              <h1 className="text-2xl font-bold text-dark">{job.title}</h1>
-              <span className={`px-3 py-1 text-sm font-medium rounded-full ${getStatusColor(job.status)}`}>
-                {job.status.charAt(0).toUpperCase() + job.status.slice(1)}
-              </span>
-            </div>
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={handleEditJob}
-                className="bg-primary text-white px-4 py-2 rounded hover:bg-secondary transition-colors"
-              >
-                Edit Job
-              </button>
-              <span className="text-dark">Welcome, {user?.name}</span>
-              <button
-                onClick={logout}
-                className="text-primary hover:text-secondary transition-colors"
-              >
-                Logout
-              </button>
+    <div className="min-h-screen bg-light py-8">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Header */}
+        <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-3xl font-bold text-dark mb-2">
+                {job.title}
+              </h1>
+              <div className="flex items-center space-x-4 text-sm text-gray-600">
+                <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full">
+                  {job.status}
+                </span>
+                <span>Posted on {new Date(job.createdAt).toLocaleDateString()}</span>
+              </div>
             </div>
           </div>
-        </div>
-      </header>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Tab Navigation */}
-        <div className="mb-8">
-          <nav className="flex space-x-8">
-            <button
-              onClick={() => setActiveTab('overview')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'overview'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Job Overview
-            </button>
-            <button
-              onClick={() => setActiveTab('candidates')}
-              className={`py-2 px-1 border-b-2 font-medium text-sm ${
-                activeTab === 'candidates'
-                  ? 'border-primary text-primary'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              Candidates ({jobCandidates.length})
-            </button>
-          </nav>
+          <div className="prose max-w-none">
+            <p className="text-lg text-gray-700 mb-6">
+              {job.description}
+            </p>
+          </div>
         </div>
 
-        {/* Tab Content */}
-        {activeTab === 'overview' ? (
-          <div className="space-y-8">
-            {/* Job Details */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-semibold text-dark mb-4">Job Details</h2>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="text-lg font-medium text-dark mb-3">Description</h3>
-                  <p className="text-gray-700 whitespace-pre-wrap">{job.description}</p>
-                </div>
-                <div>
-                  <h3 className="text-lg font-medium text-dark mb-3">Application Link</h3>
-                  <a
-                    href={job.applicationLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary hover:text-secondary transition-colors break-all"
-                  >
-                    {job.applicationLink}
-                  </a>
-                </div>
-              </div>
-            </div>
-
-            {/* Performance Requirements */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-semibold text-dark mb-4">Performance Requirements</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <h3 className="text-lg font-medium text-dark mb-2">Experience</h3>
-                  <p className="text-gray-700">{job.performance.experience}</p>
-                </div>
-                <div>
-                  <h3 className="text-lg font-medium text-dark mb-2">Deliveries</h3>
-                  <p className="text-gray-700">{job.performance.deliveries}</p>
-                </div>
-                <div>
-                  <h3 className="text-lg font-medium text-dark mb-2">Skills</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {job.performance.skills.map((skill, index) => (
-                      <span
-                        key={index}
-                        className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm"
-                      >
-                        {skill}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Energy Requirements */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-semibold text-dark mb-4">Energy Requirements</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div>
-                  <h3 className="text-lg font-medium text-dark mb-2">Availability</h3>
-                  <p className="text-gray-700">{job.energy.availability}</p>
-                </div>
-                <div>
-                  <h3 className="text-lg font-medium text-dark mb-2">Deadlines</h3>
-                  <p className="text-gray-700">{job.energy.deadlines}</p>
-                </div>
-                <div>
-                  <h3 className="text-lg font-medium text-dark mb-2">Pressure</h3>
-                  <p className="text-gray-700">{job.energy.pressure}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Culture Requirements */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-semibold text-dark mb-4">Culture Requirements</h2>
+        {/* Job Details */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+          {/* Performance Requirements */}
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <h2 className="text-xl font-semibold text-dark mb-4 flex items-center">
+              <svg className="h-5 w-5 mr-2 text-primary" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              Performance Requirements
+            </h2>
+            <div className="space-y-4">
               <div>
-                <h3 className="text-lg font-medium text-dark mb-2">Legal Values</h3>
+                <h3 className="font-medium text-dark mb-1">Experience</h3>
+                <p className="text-gray-600">{job.performance.experience}</p>
+              </div>
+              <div>
+                <h3 className="font-medium text-dark mb-1">Deliveries</h3>
+                <p className="text-gray-600">{job.performance.deliveries}</p>
+              </div>
+              <div>
+                <h3 className="font-medium text-dark mb-1">Required Skills</h3>
+                <div className="flex flex-wrap gap-2">
+                  {job.performance.skills.map((skill, index) => (
+                    <span
+                      key={index}
+                      className="px-3 py-1 bg-primary text-white text-sm rounded-full"
+                    >
+                      {skill}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Energy & Culture */}
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <h2 className="text-xl font-semibold text-dark mb-4 flex items-center">
+              <svg className="h-5 w-5 mr-2 text-primary" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+              </svg>
+              Work Environment
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <h3 className="font-medium text-dark mb-1">Availability</h3>
+                <p className="text-gray-600">{job.energy.availability}</p>
+              </div>
+              <div>
+                <h3 className="font-medium text-dark mb-1">Deadlines</h3>
+                <p className="text-gray-600">{job.energy.deadlines}</p>
+              </div>
+              <div>
+                <h3 className="font-medium text-dark mb-1">Pressure Level</h3>
+                <p className="text-gray-600">{job.energy.pressure}</p>
+              </div>
+              <div>
+                <h3 className="font-medium text-dark mb-1">Company Values</h3>
                 <div className="flex flex-wrap gap-2">
                   {job.culture.legalValues.map((value, index) => (
                     <span
                       key={index}
-                      className="bg-accent/10 text-accent px-3 py-1 rounded-full text-sm"
+                      className="px-3 py-1 bg-secondary text-white text-sm rounded-full"
                     >
                       {value}
                     </span>
@@ -265,167 +157,39 @@ export default function JobDetailsPage() {
                 </div>
               </div>
             </div>
-
-            {/* Job Metadata */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <h2 className="text-xl font-semibold text-dark mb-4">Job Information</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="text-lg font-medium text-dark mb-2">Created</h3>
-                  <p className="text-gray-700">{formatDate(job.createdAt)}</p>
-                </div>
-                <div>
-                  <h3 className="text-lg font-medium text-dark mb-2">Last Updated</h3>
-                  <p className="text-gray-700">{formatDate(job.updatedAt)}</p>
-                </div>
-              </div>
-            </div>
           </div>
-        ) : (
-          <div className="space-y-6">
-            {/* Candidates Section */}
-            <div className="flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-dark">
-                Candidates for {job.title} ({jobCandidates.length})
-              </h2>
-              <div className="flex space-x-2">
-                <select className="border border-gray-300 rounded px-3 py-1 text-sm">
-                  <option>All Status</option>
-                  <option>New</option>
-                  <option>Reviewed</option>
-                  <option>Sent to Manager</option>
-                </select>
-                <input
-                  type="text"
-                  placeholder="Search candidates..."
-                  className="border border-gray-300 rounded px-3 py-1 text-sm"
-                />
-              </div>
-            </div>
+        </div>
 
-            {jobCandidates.length === 0 ? (
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-12 text-center">
-                <h3 className="text-lg font-medium text-dark mb-4">No candidates yet</h3>
-                <p className="text-gray-600 mb-6">Candidates will appear here once they apply to this job posting</p>
-                <a
-                  href={job.applicationLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="bg-primary text-white px-6 py-3 rounded-lg hover:bg-secondary transition-colors inline-block"
-                >
-                  View Application Link
-                </a>
-              </div>
-            ) : (
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Candidate
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Contact
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Status
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          FitScore
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Applied
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {jobCandidates.map((candidate) => (
-                        <tr key={candidate.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div className="flex-shrink-0 h-10 w-10">
-                                <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                                  <span className="text-primary font-medium">
-                                    {candidate.name.split(' ').map(n => n[0]).join('')}
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="ml-4">
-                                <div className="text-sm font-medium text-dark">
-                                  {candidate.name}
-                                </div>
-                                <div className="text-sm text-gray-500">
-                                  {candidate.email}
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">{candidate.phone}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                              candidate.status === 'new' 
-                                ? 'bg-blue-100 text-blue-800'
-                                : candidate.status === 'reviewed'
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : 'bg-green-100 text-green-800'
-                            }`}>
-                              {candidate.status.replace('_', ' ')}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            {candidate.fitScore ? (
-                              <div className="text-sm">
-                                <span className={`font-medium ${getFitScoreColor(candidate.fitScore.overallScore)}`}>
-                                  {candidate.fitScore.overallScore}/100
-                                </span>
-                                <div className="text-xs text-gray-500">
-                                  {getFitScoreLabel(candidate.fitScore.overallScore)}
-                                </div>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => handleCalculateFitScore(candidate.id)}
-                                className="text-xs bg-primary text-white px-2 py-1 rounded hover:bg-secondary transition-colors"
-                              >
-                                Calculate
-                              </button>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {formatDate(candidate.createdAt)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <button
-                              onClick={() => handleViewCandidate(candidate)}
-                              className="text-primary hover:text-secondary transition-colors mr-3"
-                            >
-                              View
-                            </button>
-                            {!candidate.fitScore && (
-                              <button
-                                onClick={() => handleCalculateFitScore(candidate.id)}
-                                className="text-accent hover:text-secondary transition-colors"
-                              >
-                                Score
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </main>
+        {/* Application Link */}
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <ApplicationLink
+            jobId={job.id}
+            applicationUrl={job.applicationLink}
+          />
+        </div>
+
+        {/* Preview Application Form */}
+        <div className="mt-8 bg-white rounded-lg shadow-lg p-6">
+          <h2 className="text-xl font-semibold text-dark mb-4">
+            Preview Application Form
+          </h2>
+          <p className="text-gray-600 mb-4">
+            Candidates will see this form when they click the application link:
+          </p>
+          <a
+            href={job.applicationLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center px-4 py-2 bg-primary text-white rounded-md hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-colors duration-200"
+          >
+            <svg className="h-4 w-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
+              <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
+            </svg>
+            Open Application Form
+          </a>
+        </div>
+      </div>
     </div>
   );
 }
