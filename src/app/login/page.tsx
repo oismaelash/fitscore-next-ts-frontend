@@ -1,17 +1,26 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { LoginForm } from '@/types';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login, isLoading, error, clearError } = useAuth();
+  const searchParams = useSearchParams();
+  const { login, isLoading, error, clearError, isAuthenticated } = useAuth();
   const [formData, setFormData] = useState<LoginForm>({
     email: '',
     password: '',
   });
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      const redirectTo = searchParams.get('redirectTo') || '/dashboard';
+      router.push(redirectTo);
+    }
+  }, [isAuthenticated, router, searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,7 +28,8 @@ export default function LoginPage() {
     
     try {
       await login(formData);
-      router.push('/dashboard');
+      const redirectTo = searchParams.get('redirectTo') || '/dashboard';
+      router.push(redirectTo);
     } catch (error) {
       console.error('Login failed:', error);
     }
@@ -31,6 +41,18 @@ export default function LoginPage() {
       [e.target.name]: e.target.value,
     });
   };
+
+  // Don't render login form if already authenticated
+  if (isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-light flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-dark">Redirecting...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-light flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">

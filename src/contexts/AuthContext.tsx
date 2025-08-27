@@ -15,12 +15,13 @@ type AuthAction =
   | { type: 'LOGIN_SUCCESS'; payload: User }
   | { type: 'LOGIN_FAILURE'; payload: string }
   | { type: 'LOGOUT' }
-  | { type: 'CLEAR_ERROR' };
+  | { type: 'CLEAR_ERROR' }
+  | { type: 'SET_LOADING'; payload: boolean };
 
 const initialState: AuthState = {
   user: null,
   isAuthenticated: false,
-  isLoading: false,
+  isLoading: true, // Start with loading true to check auth state
   error: null,
 };
 
@@ -61,6 +62,11 @@ const authReducer = (state: AuthState, action: AuthAction): AuthState => {
         ...state,
         error: null,
       };
+    case 'SET_LOADING':
+      return {
+        ...state,
+        isLoading: action.payload,
+      };
     default:
       return state;
   }
@@ -94,16 +100,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // TODO: Implement session check with Supabase
+        // Check for stored user data
+        const storedUser = localStorage.getItem('auth_user');
         const token = localStorage.getItem('auth_token');
-        if (token) {
-          // Verify token and get user data
-          // For now, we'll just check if token exists
-          // dispatch({ type: 'LOGIN_SUCCESS', payload: userData });
+        
+        if (token && storedUser) {
+          try {
+            const userData = JSON.parse(storedUser);
+            // For now, we'll trust the stored data
+            // In a real app, you'd verify the token with your backend
+            dispatch({ type: 'LOGIN_SUCCESS', payload: userData });
+          } catch (error) {
+            console.error('Failed to parse stored user data:', error);
+            localStorage.removeItem('auth_user');
+            localStorage.removeItem('auth_token');
+            dispatch({ type: 'SET_LOADING', payload: false });
+          }
+        } else {
+          dispatch({ type: 'SET_LOADING', payload: false });
         }
       } catch (error) {
         console.error('Auth check failed:', error);
-        dispatch({ type: 'LOGOUT' });
+        localStorage.removeItem('auth_user');
+        localStorage.removeItem('auth_token');
+        dispatch({ type: 'SET_LOADING', payload: false });
       }
     };
 
@@ -126,8 +146,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         createdAt: new Date().toISOString(),
       };
 
-      // Store token
+      // Store token and user data
       localStorage.setItem('auth_token', 'mock_token');
+      localStorage.setItem('auth_user', JSON.stringify(mockUser));
       
       dispatch({ type: 'LOGIN_SUCCESS', payload: mockUser });
     } catch (error) {
@@ -151,8 +172,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         createdAt: new Date().toISOString(),
       };
 
-      // Store token
+      // Store token and user data
       localStorage.setItem('auth_token', 'mock_token');
+      localStorage.setItem('auth_user', JSON.stringify(mockUser));
       
       dispatch({ type: 'LOGIN_SUCCESS', payload: mockUser });
     } catch (error) {
@@ -162,6 +184,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const logout = () => {
     localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_user');
     dispatch({ type: 'LOGOUT' });
   };
 
