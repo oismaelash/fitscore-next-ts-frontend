@@ -24,33 +24,49 @@ export default function JobDetailPage() {
   } = useCandidates();
 
   useEffect(() => {
-    // TODO: Fetch job details from API
-    // For now, using mock data
-    const mockJob: JobPosting = {
-      id: jobId,
-      title: 'Senior Software Engineer',
-      description: 'We are looking for a talented Senior Software Engineer to join our team...',
-      performance: {
-        experience: '5+ years of experience in software development',
-        deliveries: 'Ability to deliver high-quality code on time',
-        skills: ['React', 'Node.js', 'TypeScript', 'PostgreSQL']
-      },
-      energy: {
-        availability: 'Full-time, remote-friendly',
-        deadlines: 'Agile environment with 2-week sprints',
-        pressure: 'Fast-paced startup environment'
-      },
-      culture: {
-        legalValues: ['Innovation', 'Collaboration', 'Excellence', 'Integrity']
-      },
-      applicationLink: `${window.location.origin}/apply/${jobId}`,
-      status: 'published',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+    const fetchJob = async () => {
+      try {
+        const response = await fetch(`/api/jobs/${jobId}`);
+        
+        if (!response.ok) {
+          if (response.status === 404) {
+            setJob(null);
+            setLoading(false);
+            return;
+          }
+          throw new Error(`Failed to fetch job: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+          throw new Error(data.error || 'Failed to fetch job');
+        }
+        
+        // Transform the API response to match our JobPosting type
+        const jobData: JobPosting = {
+          id: data.data.id,
+          title: data.data.title,
+          description: data.data.description,
+          performance: data.data.performance,
+          energy: data.data.energy,
+          culture: data.data.culture,
+          applicationLink: data.data.application_link,
+          status: data.data.status,
+          createdAt: data.data.created_at,
+          updatedAt: data.data.updated_at
+        };
+        
+        setJob(jobData);
+      } catch (error) {
+        console.error('Error fetching job:', error);
+        setJob(null);
+      } finally {
+        setLoading(false);
+      }
     };
     
-    setJob(mockJob);
-    setLoading(false);
+    fetchJob();
   }, [jobId]);
 
   useEffect(() => {

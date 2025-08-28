@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useCallback, ReactNode } from 'react';
 import { Candidate, CandidateForm, FitScore, ApiResponse, PaginatedResponse } from '@/types';
 
 interface CandidatesState {
@@ -181,261 +181,56 @@ interface CandidatesProviderProps {
 export const CandidatesProvider: React.FC<CandidatesProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(candidatesReducer, initialState);
 
-  const fetchCandidates = async (jobId: string, page = 1, limit = 10) => {
+  const fetchCandidates = useCallback(async (jobId: string, page = 1, limit = 10) => {
     dispatch({ type: 'FETCH_CANDIDATES_START' });
     dispatch({ type: 'SET_CURRENT_JOB_ID', payload: jobId });
     
     try {
-      // TODO: Implement API call
-      // const response = await fetch(`/api/candidates?jobId=${jobId}&page=${page}&limit=${limit}`);
-      // const data: PaginatedResponse<Candidate> = await response.json();
+      const response = await fetch(`/api/candidates?jobId=${jobId}&page=${page}&limit=${limit}`);
       
-      // Mock data for now
-      const mockCandidates: Candidate[] = [
-        {
-          id: '1',
-          jobId,
-          name: 'John Smith',
-          email: 'john.smith@example.com',
-          phone: '+1234567890',
-          resumeUrl: 'https://example.com/resume1.pdf',
-          culturalFit: {
-            performance: 'High performer with excellent track record',
-            energy: 'Very energetic and deadline-driven',
-            culture: 'Strong alignment with company values',
-          },
-          fitScore: {
-            id: 'fs1',
-            candidateId: '1',
-            jobId,
-            technicalScore: 85,
-            culturalScore: 90,
-            behavioralScore: 88,
-            overallScore: 87.7,
-            aiAnalysis: 'Strong technical skills with excellent cultural fit...',
-            calculatedAt: new Date().toISOString(),
-          },
-          status: 'reviewed',
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: '2',
-          jobId,
-          name: 'Jane Doe',
-          email: 'jane.doe@example.com',
-          phone: '+1234567891',
-          resumeUrl: 'https://example.com/resume2.pdf',
-          culturalFit: {
-            performance: 'Consistent performer with good results',
-            energy: 'Balanced approach to work-life',
-            culture: 'Good cultural alignment',
-          },
-          status: 'new',
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: '3',
-          jobId,
-          name: 'Michael Johnson',
-          email: 'michael.johnson@example.com',
-          phone: '+1234567892',
-          resumeUrl: 'https://example.com/resume3.pdf',
-          culturalFit: {
-            performance: 'Exceptional technical skills and leadership',
-            energy: 'High energy, thrives under pressure',
-            culture: 'Perfect cultural match with innovation focus',
-          },
-          fitScore: {
-            id: 'fs3',
-            candidateId: '3',
-            jobId,
-            technicalScore: 92,
-            culturalScore: 95,
-            behavioralScore: 89,
-            overallScore: 92.0,
-            aiAnalysis: 'Top-tier candidate with outstanding technical and cultural alignment...',
-            calculatedAt: new Date().toISOString(),
-          },
-          status: 'sent_to_manager',
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: '4',
-          jobId,
-          name: 'Sarah Wilson',
-          email: 'sarah.wilson@example.com',
-          phone: '+1234567893',
-          resumeUrl: 'https://example.com/resume4.pdf',
-          culturalFit: {
-            performance: 'Solid technical background with room for growth',
-            energy: 'Steady performer, reliable',
-            culture: 'Good fit with collaborative environment',
-          },
-          fitScore: {
-            id: 'fs4',
-            candidateId: '4',
-            jobId,
-            technicalScore: 72,
-            culturalScore: 78,
-            behavioralScore: 75,
-            overallScore: 75.0,
-            aiAnalysis: 'Competent candidate with good potential for growth...',
-            calculatedAt: new Date().toISOString(),
-          },
-          status: 'reviewed',
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: '5',
-          jobId,
-          name: 'David Chen',
-          email: 'david.chen@example.com',
-          phone: '+1234567894',
-          resumeUrl: 'https://example.com/resume5.pdf',
-          culturalFit: {
-            performance: 'Strong analytical skills and problem-solving',
-            energy: 'Methodical and thorough approach',
-            culture: 'Values integrity and excellence',
-          },
-          fitScore: {
-            id: 'fs5',
-            candidateId: '5',
-            jobId,
-            technicalScore: 88,
-            culturalScore: 82,
-            behavioralScore: 85,
-            overallScore: 85.0,
-            aiAnalysis: 'Excellent technical candidate with strong analytical skills...',
-            calculatedAt: new Date().toISOString(),
-          },
-          status: 'reviewed',
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: '6',
-          jobId,
-          name: 'Emily Rodriguez',
-          email: 'emily.rodriguez@example.com',
-          phone: '+1234567895',
-          resumeUrl: 'https://example.com/resume6.pdf',
-          culturalFit: {
-            performance: 'Junior developer with potential',
-            energy: 'Enthusiastic and eager to learn',
-            culture: 'Good cultural fit, team-oriented',
-          },
-          status: 'new',
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: '7',
-          jobId,
-          name: 'Alex Thompson',
-          email: 'alex.thompson@example.com',
-          phone: '+1234567896',
-          resumeUrl: 'https://example.com/resume7.pdf',
-          culturalFit: {
-            performance: 'Experienced developer with leadership skills',
-            energy: 'High energy and results-driven',
-            culture: 'Strong alignment with company values',
-          },
-          fitScore: {
-            id: 'fs7',
-            candidateId: '7',
-            jobId,
-            technicalScore: 79,
-            culturalScore: 85,
-            behavioralScore: 82,
-            overallScore: 82.0,
-            aiAnalysis: 'Experienced candidate with good leadership potential...',
-            calculatedAt: new Date().toISOString(),
-          },
-          status: 'sent_to_manager',
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: '8',
-          jobId,
-          name: 'Lisa Park',
-          email: 'lisa.park@example.com',
-          phone: '+1234567897',
-          resumeUrl: 'https://example.com/resume8.pdf',
-          culturalFit: {
-            performance: 'Creative problem solver with unique perspective',
-            energy: 'Innovative and adaptable',
-            culture: 'Brings diversity and fresh ideas',
-          },
-          fitScore: {
-            id: 'fs8',
-            candidateId: '8',
-            jobId,
-            technicalScore: 68,
-            culturalScore: 75,
-            behavioralScore: 70,
-            overallScore: 71.0,
-            aiAnalysis: 'Creative candidate with unique perspective, some technical gaps...',
-            calculatedAt: new Date().toISOString(),
-          },
-          status: 'reviewed',
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: '9',
-          jobId,
-          name: 'Robert Kim',
-          email: 'robert.kim@example.com',
-          phone: '+1234567898',
-          resumeUrl: 'https://example.com/resume9.pdf',
-          culturalFit: {
-            performance: 'Senior developer with extensive experience',
-            energy: 'Calm and methodical under pressure',
-            culture: 'Values quality and mentorship',
-          },
-          fitScore: {
-            id: 'fs9',
-            candidateId: '9',
-            jobId,
-            technicalScore: 91,
-            culturalScore: 88,
-            behavioralScore: 90,
-            overallScore: 89.7,
-            aiAnalysis: 'Senior candidate with excellent technical skills and mentorship potential...',
-            calculatedAt: new Date().toISOString(),
-          },
-          status: 'sent_to_manager',
-          createdAt: new Date().toISOString(),
-        },
-        {
-          id: '10',
-          jobId,
-          name: 'Maria Garcia',
-          email: 'maria.garcia@example.com',
-          phone: '+1234567899',
-          resumeUrl: 'https://example.com/resume10.pdf',
-          culturalFit: {
-            performance: 'Entry-level developer with strong fundamentals',
-            energy: 'Eager to learn and grow',
-            culture: 'Great team player and communicator',
-          },
-          status: 'new',
-          createdAt: new Date().toISOString(),
-        },
-      ];
-
+      if (!response.ok) {
+        throw new Error(`Failed to fetch candidates: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to fetch candidates');
+      }
+      
+      // Transform the API response to match our Candidate type
+      const candidates: Candidate[] = data.data.map((candidate: any) => ({
+        id: candidate.id,
+        jobId: candidate.jobId,
+        name: candidate.name,
+        email: candidate.email,
+        phone: candidate.phone,
+        resumeUrl: candidate.resumeUrl,
+        culturalFit: candidate.culturalFit,
+        status: candidate.status,
+        createdAt: candidate.createdAt,
+        fitScore: candidate.fitScore || undefined
+      }));
+      
       dispatch({
         type: 'FETCH_CANDIDATES_SUCCESS',
         payload: {
-          candidates: mockCandidates,
-          total: mockCandidates.length,
+          candidates,
+          total: candidates.length, // API doesn't return pagination info yet
           page,
-          totalPages: 1,
-        },
+          totalPages: 1 // API doesn't return pagination info yet
+        }
       });
     } catch (error) {
-      dispatch({ type: 'FETCH_CANDIDATES_FAILURE', payload: 'Failed to fetch candidates' });
+      console.error('Error fetching candidates:', error);
+      dispatch({
+        type: 'FETCH_CANDIDATES_FAILURE',
+        payload: error instanceof Error ? error.message : 'Failed to fetch candidates'
+      });
     }
-  };
+  }, []);
 
-  const createCandidate = async (candidateData: CandidateForm, jobId: string): Promise<Candidate | null> => {
+  const createCandidate = useCallback(async (candidateData: CandidateForm, jobId: string): Promise<Candidate | null> => {
     dispatch({ type: 'CREATE_CANDIDATE_START' });
     
     try {
@@ -473,9 +268,9 @@ export const CandidatesProvider: React.FC<CandidatesProviderProps> = ({ children
       dispatch({ type: 'CREATE_CANDIDATE_FAILURE', payload: 'Failed to create candidate' });
       return null;
     }
-  };
+  }, []);
 
-  const updateCandidate = async (id: string, candidateData: Partial<Candidate>): Promise<Candidate | null> => {
+  const updateCandidate = useCallback(async (id: string, candidateData: Partial<Candidate>): Promise<Candidate | null> => {
     dispatch({ type: 'UPDATE_CANDIDATE_START' });
     
     try {
@@ -499,9 +294,9 @@ export const CandidatesProvider: React.FC<CandidatesProviderProps> = ({ children
       dispatch({ type: 'UPDATE_CANDIDATE_FAILURE', payload: 'Failed to update candidate' });
       return null;
     }
-  };
+  }, [state.candidates]);
 
-  const getCandidateById = async (id: string): Promise<Candidate | null> => {
+  const getCandidateById = useCallback(async (id: string): Promise<Candidate | null> => {
     try {
       // TODO: Implement API call
       // const response = await fetch(`/api/candidates/${id}`);
@@ -513,9 +308,9 @@ export const CandidatesProvider: React.FC<CandidatesProviderProps> = ({ children
     } catch (error) {
       return null;
     }
-  };
+  }, [state.candidates]);
 
-  const calculateFitScore = async (candidateId: string, jobId: string): Promise<FitScore | null> => {
+  const calculateFitScore = useCallback(async (candidateId: string, jobId: string): Promise<FitScore | null> => {
     dispatch({ type: 'CALCULATE_FITSCORE_START' });
     
     try {
@@ -555,19 +350,19 @@ export const CandidatesProvider: React.FC<CandidatesProviderProps> = ({ children
       dispatch({ type: 'CALCULATE_FITSCORE_FAILURE', payload: 'Failed to calculate FitScore' });
       return null;
     }
-  };
+  }, []);
 
-  const setCurrentCandidate = (candidate: Candidate | null) => {
+  const setCurrentCandidate = useCallback((candidate: Candidate | null) => {
     dispatch({ type: 'SET_CURRENT_CANDIDATE', payload: candidate });
-  };
+  }, []);
 
-  const setCurrentJobId = (jobId: string | null) => {
+  const setCurrentJobId = useCallback((jobId: string | null) => {
     dispatch({ type: 'SET_CURRENT_JOB_ID', payload: jobId });
-  };
+  }, []);
 
-  const clearError = () => {
+  const clearError = useCallback(() => {
     dispatch({ type: 'CLEAR_ERROR' });
-  };
+  }, []);
 
   const value: CandidatesContextType = {
     ...state,

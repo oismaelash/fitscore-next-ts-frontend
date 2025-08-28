@@ -12,7 +12,28 @@ export default function CandidatesPage() {
   const router = useRouter();
   const { user, logout } = useAuth();
   const { candidates, isLoading, fetchCandidates, calculateFitScore } = useCandidates();
-  const [selectedJobId, setSelectedJobId] = useState('1'); // Mock job ID
+  const [selectedJobId, setSelectedJobId] = useState<string>('');
+  const [jobs, setJobs] = useState<any[]>([]);
+
+  useEffect(() => {
+    // Fetch available jobs
+    const fetchJobs = async () => {
+      try {
+        const response = await fetch('/api/jobs');
+        if (response.ok) {
+          const data = await response.json();
+          setJobs(data.data || []);
+          if (data.data && data.data.length > 0) {
+            setSelectedJobId(data.data[0].id);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching jobs:', error);
+      }
+    };
+    
+    fetchJobs();
+  }, []);
 
   useEffect(() => {
     if (selectedJobId) {
@@ -87,9 +108,11 @@ export default function CandidatesPage() {
                     value={selectedJobId}
                     onChange={(e) => setSelectedJobId(e.target.value)}
                   >
-                    <option value="1">Senior React Developer</option>
-                    <option value="2">UI/UX Designer</option>
-                    <option value="3">Product Manager</option>
+                    {jobs.map((job) => (
+                      <option key={job.id} value={job.id}>
+                        {job.title}
+                      </option>
+                    ))}
                   </select>
                   <select className="border border-gray-300 rounded px-3 py-1 text-sm">
                     <option>All Status</option>
