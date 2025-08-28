@@ -76,86 +76,8 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Jobs with Candidates */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-dark">Jobs & Candidates Overview</h2>
-          </div>
-          <div className="p-6">
-            {jobs.length === 0 ? (
-              <p className="text-gray-500 text-center py-8">No jobs posted yet</p>
-            ) : (
-              <div className="space-y-4">
-                {jobs.slice(0, 5).map((job) => {
-                  const jobCandidates = candidates.filter(c => c.jobId === job.id);
-                  const scoredCandidates = jobCandidates.filter(c => c.fitScore);
-                  
-                  return (
-                    <div key={job.id} className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex justify-between items-start">
-                        <div className="flex-1">
-                          <h3 className="text-lg font-semibold text-dark">{job.title}</h3>
-                          <p className="text-gray-600 text-sm">{job.description.substring(0, 100)}...</p>
-                          <div className="flex items-center space-x-4 mt-2">
-                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                              job.status === 'published' 
-                                ? 'bg-green-100 text-green-800' 
-                                : job.status === 'draft'
-                                ? 'bg-yellow-100 text-yellow-800'
-                                : 'bg-red-100 text-red-800'
-                            }`}>
-                              {job.status}
-                            </span>
-                            <span className="text-gray-500 text-sm">
-                              {new Date(job.createdAt).toLocaleDateString()}
-                            </span>
-                          </div>
-                          <div className="flex items-center space-x-6 mt-3">
-                            <div className="flex items-center space-x-2">
-                              <span className="text-sm text-gray-600">Candidates:</span>
-                              <span className="text-sm font-medium text-primary">{jobCandidates.length}</span>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <span className="text-sm text-gray-600">Scored:</span>
-                              <span className="text-sm font-medium text-accent">{scoredCandidates.length}</span>
-                            </div>
-                            {scoredCandidates.length > 0 && (
-                              <div className="flex items-center space-x-2">
-                                <span className="text-sm text-gray-600">Avg Score:</span>
-                                <span className="text-sm font-medium text-green-600">
-                                  {Math.round(scoredCandidates.reduce((sum, c) => sum + (c.fitScore?.overallScore || 0), 0) / scoredCandidates.length)}/100
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex flex-col space-y-2 ml-4">
-                          <button 
-                            onClick={() => router.push(`/jobs/${job.id}`)}
-                            className="text-primary hover:text-secondary transition-colors text-sm"
-                          >
-                            View Details
-                          </button>
-                          {jobCandidates.length > 0 && (
-                            <button 
-                              onClick={() => router.push(`/jobs/${job.id}?tab=candidates`)}
-                              className="text-accent hover:text-secondary transition-colors text-sm"
-                            >
-                              View Candidates ({jobCandidates.length})
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-
         {/* Quick Actions */}
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="mt-8 grid grid-cols-1 md:grid-cols-1 gap-6">
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
             <h3 className="text-lg font-semibold text-dark mb-4">Quick Actions</h3>
             <div className="space-y-3">
@@ -165,36 +87,18 @@ export default function Home() {
               >
                 Create New Job Posting
               </button>
-              <button 
+              {/* <button 
                 onClick={() => router.push('/candidates')}
                 className="w-full border border-primary text-primary py-2 px-4 rounded hover:bg-primary hover:text-white transition-colors"
               >
                 View All Candidates
-              </button>
+              </button> */}
               <button 
                 onClick={() => router.push('/jobs')}
                 className="w-full border border-primary text-primary py-2 px-4 rounded hover:bg-primary hover:text-white transition-colors"
               >
                 Manage Job Postings
               </button>
-            </div>
-          </div>
-          
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-            <h3 className="text-lg font-semibold text-dark mb-4">System Status</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">AI FitScore Engine</span>
-                <span className="text-green-600 font-medium">Online</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Database</span>
-                <span className="text-green-600 font-medium">Connected</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-gray-600">Email Service</span>
-                <span className="text-green-600 font-medium">Active</span>
-              </div>
             </div>
           </div>
         </div>
