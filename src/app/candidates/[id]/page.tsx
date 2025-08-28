@@ -5,8 +5,8 @@ import { useRouter, useParams } from 'next/navigation';
 import { useCandidates } from '@/contexts/CandidatesContext';
 import { useJobs } from '@/contexts/JobsContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { AuthGuard } from '@/components';
-import { Candidate, JobPosting } from '@/types';
+import { AuthGuard, InterviewHistoryForm, InterviewStats } from '@/components';
+import { Candidate, JobPosting, Interview } from '@/types';
 import { formatDate, getFitScoreColor, getFitScoreLabel, copyToClipboard } from '@/utils';
 
 // Mock data for demonstration
@@ -67,9 +67,11 @@ const mockJob: JobPosting = {
 };
 
 // Mock interview data
-const mockInterviews = [
+const mockInterviews: Interview[] = [
   {
     id: '1',
+    candidateId: '1',
+    jobId: 'job-123',
     type: 'Technical Interview',
     date: '2024-01-12T14:00:00Z',
     duration: '60 minutes',
@@ -77,9 +79,25 @@ const mockInterviews = [
     status: 'completed',
     notes: 'Excellent technical skills demonstrated. Strong problem-solving approach. Good communication during technical discussions. Recommended for next round.',
     score: 9.2,
+    feedback: {
+      technicalSkills: 9,
+      communication: 8,
+      problemSolving: 9,
+      culturalFit: 8,
+      experience: 9,
+      overall: 9.2,
+      strengths: ['Strong technical knowledge', 'Excellent problem-solving skills', 'Good communication'],
+      areasForImprovement: ['Could improve on system design questions'],
+      recommendation: 'strong_yes',
+      nextSteps: 'Proceed to final round interview'
+    },
+    createdAt: '2024-01-12T14:00:00Z',
+    updatedAt: '2024-01-12T14:00:00Z',
   },
   {
     id: '2',
+    candidateId: '1',
+    jobId: 'job-123',
     type: 'Cultural Fit Interview',
     date: '2024-01-14T10:00:00Z',
     duration: '45 minutes',
@@ -87,16 +105,40 @@ const mockInterviews = [
     status: 'completed',
     notes: 'Great cultural alignment. Shows genuine interest in our mission. Strong team player mentality. Excellent communication skills.',
     score: 8.8,
+    feedback: {
+      technicalSkills: 7,
+      communication: 9,
+      problemSolving: 8,
+      culturalFit: 9,
+      experience: 8,
+      overall: 8.8,
+      strengths: ['Great cultural fit', 'Excellent communication', 'Team player'],
+      areasForImprovement: ['Could provide more specific examples'],
+      recommendation: 'yes',
+      nextSteps: 'Schedule final round interview'
+    },
+    createdAt: '2024-01-14T10:00:00Z',
+    updatedAt: '2024-01-14T10:00:00Z',
   },
   {
     id: '3',
+    candidateId: '1',
+    jobId: 'job-123',
     type: 'Final Round Interview',
     date: '2024-01-20T15:00:00Z',
     duration: '90 minutes',
     interviewer: 'David Kim',
     status: 'scheduled',
     notes: '',
-    score: null,
+    score: undefined,
+    feedback: {
+      strengths: [],
+      areasForImprovement: [],
+      recommendation: 'maybe',
+      nextSteps: ''
+    },
+    createdAt: '2024-01-15T09:00:00Z',
+    updatedAt: '2024-01-15T09:00:00Z',
   },
 ];
 
@@ -187,18 +229,26 @@ export default function CandidateDetailsPage() {
     alert('Notes saved successfully!');
   };
 
-  const handleAddInterview = () => {
-    const newInterview = {
+  const handleAddInterview = (interviewData: Omit<Interview, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const newInterview: Interview = {
       id: Date.now().toString(),
-      type: 'Technical Interview',
-      date: new Date().toISOString(),
-      duration: '60 minutes',
-      interviewer: 'TBD',
-      status: 'scheduled' as const,
-      notes: '',
-      score: null,
+      ...interviewData,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
     setInterviews([...interviews, newInterview]);
+  };
+
+  const handleUpdateInterview = (id: string, updates: Partial<Interview>) => {
+    setInterviews(interviews.map(interview => 
+      interview.id === id 
+        ? { ...interview, ...updates, updatedAt: new Date().toISOString() }
+        : interview
+    ));
+  };
+
+  const handleDeleteInterview = (id: string) => {
+    setInterviews(interviews.filter(interview => interview.id !== id));
   };
 
   const getStatusColor = (status: string) => {
@@ -227,18 +277,7 @@ export default function CandidateDetailsPage() {
     }
   };
 
-  const getInterviewStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      case 'scheduled':
-        return 'bg-blue-100 text-blue-800';
-      case 'cancelled':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
+
 
   const renderScoreBar = (score: number, label: string) => (
     <div className="mb-4">
@@ -644,66 +683,20 @@ export default function CandidateDetailsPage() {
             </div>
           ) : (
             <div className="space-y-8">
-              {/* Interview History */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-xl font-semibold text-dark">Interview History</h2>
-                  <button
-                    onClick={handleAddInterview}
-                    className="bg-primary text-white px-4 py-2 rounded-lg hover:bg-secondary transition-colors"
-                  >
-                    Add Interview
-                  </button>
-                </div>
-                
-                {interviews.length > 0 ? (
-                  <div className="space-y-4">
-                    {interviews.map((interview) => (
-                      <div key={interview.id} className="border border-gray-200 rounded-lg p-4">
-                        <div className="flex justify-between items-start mb-3">
-                          <div>
-                            <h3 className="font-medium text-dark">{interview.type}</h3>
-                            <p className="text-sm text-gray-600">
-                              {formatDate(interview.date)} • {interview.duration} • {interview.interviewer}
-                            </p>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${getInterviewStatusColor(interview.status)}`}>
-                              {interview.status}
-                            </span>
-                            {interview.score && (
-                              <span className="text-sm font-medium text-gray-700">
-                                Score: {interview.score}/10
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        {interview.notes && (
-                          <div className="bg-gray-50 p-3 rounded">
-                            <p className="text-sm text-gray-700">{interview.notes}</p>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-12">
-                    <div className="text-6xl mb-4">📝</div>
-                    <h3 className="text-lg font-medium text-dark mb-4">No Interview History</h3>
-                    <p className="text-gray-600 mb-6">
-                      No interviews have been scheduled or recorded for this candidate yet.
-                    </p>
-                    <button
-                      onClick={handleAddInterview}
-                      className="bg-accent text-white px-6 py-3 rounded-lg hover:bg-secondary transition-colors"
-                    >
-                      Schedule Interview
-                    </button>
-                  </div>
-                )}
-              </div>
+              {/* Interview Statistics */}
+              <InterviewStats interviews={interviews} />
 
-              {/* Interview Notes Template */}
+              {/* Interview History Form */}
+              <InterviewHistoryForm
+                candidateId={candidate.id}
+                jobId={candidate.jobId}
+                interviews={interviews}
+                onAddInterview={handleAddInterview}
+                onUpdateInterview={handleUpdateInterview}
+                onDeleteInterview={handleDeleteInterview}
+              />
+
+              {/* Quick Notes */}
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <h3 className="text-lg font-medium text-dark mb-4">Quick Notes</h3>
                 <textarea

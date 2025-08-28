@@ -130,3 +130,61 @@ export interface CandidateForm {
     culture: string;
   };
 }
+
+// Interview types
+export interface Interview {
+  id: string;
+  candidateId: string;
+  jobId: string;
+  type: InterviewType;
+  date: string;
+  duration: string;
+  interviewer: string;
+  status: InterviewStatus;
+  notes: string;
+  score?: number;
+  feedback: InterviewFeedback;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type InterviewType = 
+  | 'Technical Interview'
+  | 'Cultural Fit Interview'
+  | 'Behavioral Interview'
+  | 'Final Round Interview'
+  | 'Phone Screen'
+  | 'Take-Home Assignment Review'
+  | 'Reference Check'
+  | 'Other';
+
+export type InterviewStatus = 
+  | 'scheduled'
+  | 'completed'
+  | 'cancelled'
+  | 'rescheduled'
+  | 'no-show';
+
+export interface InterviewFeedback {
+  technicalSkills?: number;
+  communication?: number;
+  problemSolving?: number;
+  culturalFit?: number;
+  experience?: number;
+  overall?: number;
+  strengths: string[];
+  areasForImprovement: string[];
+  recommendation: 'strong_yes' | 'yes' | 'maybe' | 'no' | 'strong_no';
+  nextSteps: string;
+}
+
+export interface InterviewForm {
+  type: InterviewType;
+  date: string;
+  time: string;
+  duration: string;
+  interviewer: string;
+  location?: string;
+  notes?: string;
+  feedback?: Partial<InterviewFeedback>;
+}
