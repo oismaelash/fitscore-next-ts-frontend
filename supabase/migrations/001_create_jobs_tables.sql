@@ -62,24 +62,24 @@ CREATE TRIGGER update_jobs_updated_at
     EXECUTE FUNCTION update_updated_at_column();
 
 -- Enable Row Level Security (RLS)
-ALTER TABLE jobs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE candidates ENABLE ROW LEVEL SECURITY;
-ALTER TABLE fit_scores ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE jobs ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE candidates ENABLE ROW LEVEL SECURITY;
+-- ALTER TABLE fit_scores ENABLE ROW LEVEL SECURITY;
 
 -- Create policies for jobs table
-CREATE POLICY "Allow public read access to published jobs" ON jobs
-    FOR SELECT USING (status = 'published');
+-- CREATE POLICY "Allow public read access to published jobs" ON jobs
+--     FOR SELECT USING (status = 'published');
 
-CREATE POLICY "Allow authenticated users to manage jobs" ON jobs
-    FOR ALL USING (auth.role() = 'authenticated');
+-- CREATE POLICY "Allow authenticated users to manage jobs" ON jobs
+--     FOR ALL USING (auth.role() = 'authenticated');
 
 -- Create policies for candidates table
-CREATE POLICY "Allow authenticated users to manage candidates" ON candidates
-    FOR ALL USING (auth.role() = 'authenticated');
+-- CREATE POLICY "Allow authenticated users to manage candidates" ON candidates
+--     FOR ALL USING (auth.role() = 'authenticated');
 
 -- Create policies for fit_scores table
-CREATE POLICY "Allow authenticated users to manage fit_scores" ON fit_scores
-    FOR ALL USING (auth.role() = 'authenticated');
+-- CREATE POLICY "Allow authenticated users to manage fit_scores" ON fit_scores
+--     FOR ALL USING (auth.role() = 'authenticated');
 
 -- Create a function to get job statistics
 CREATE OR REPLACE FUNCTION get_job_stats()

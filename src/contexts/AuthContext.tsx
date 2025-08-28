@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import { User, LoginForm, SignupForm } from '@/types';
+import { supabase } from '@/lib/supabase';
 
 interface AuthState {
   user: User | null;
@@ -100,59 +101,76 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // Check for stored user data
-        const storedUser = localStorage.getItem('auth_user');
-        const token = localStorage.getItem('auth_token');
+        // Get current session from Supabase
+        const { data: { session }, error } = await supabase.auth.getSession();
         
-        if (token && storedUser) {
-          try {
-            const userData = JSON.parse(storedUser);
-            // For now, we'll trust the stored data
-            // In a real app, you'd verify the token with your backend
-            dispatch({ type: 'LOGIN_SUCCESS', payload: userData });
-          } catch (error) {
-            console.error('Failed to parse stored user data:', error);
-            localStorage.removeItem('auth_user');
-            localStorage.removeItem('auth_token');
-            dispatch({ type: 'SET_LOADING', payload: false });
-          }
+        if (session && session.user) {
+          const user: User = {
+            id: session.user.id,
+            email: session.user.email || '',
+            name: session.user.user_metadata?.name || session.user.email || '',
+            role: session.user.user_metadata?.role || 'manager',
+            createdAt: session.user.created_at,
+          };
+          dispatch({ type: 'LOGIN_SUCCESS', payload: user });
         } else {
           dispatch({ type: 'SET_LOADING', payload: false });
         }
       } catch (error) {
         console.error('Auth check failed:', error);
-        localStorage.removeItem('auth_user');
-        localStorage.removeItem('auth_token');
         dispatch({ type: 'SET_LOADING', payload: false });
       }
     };
 
     checkAuth();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'SIGNED_IN' && session?.user) {
+          const user: User = {
+            id: session.user.id,
+            email: session.user.email || '',
+            name: session.user.user_metadata?.name || session.user.email || '',
+            role: session.user.user_metadata?.role || 'manager',
+            createdAt: session.user.created_at,
+          };
+          dispatch({ type: 'LOGIN_SUCCESS', payload: user });
+        } else if (event === 'SIGNED_OUT') {
+          dispatch({ type: 'LOGOUT' });
+        }
+      }
+    );
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const login = async (credentials: LoginForm) => {
     dispatch({ type: 'LOGIN_START' });
     
     try {
-      // TODO: Implement Supabase authentication
-      // const { data, error } = await supabase.auth.signInWithPassword(credentials);
-      
-      // Mock implementation for now
-      const mockUser: User = {
-        id: '1',
+      const { data, error } = await supabase.auth.signInWithPassword({
         email: credentials.email,
-        name: 'John Doe',
-        role: 'manager',
-        createdAt: new Date().toISOString(),
-      };
+        password: credentials.password,
+      });
 
-      // Store token and user data
-      localStorage.setItem('auth_token', 'mock_token');
-      localStorage.setItem('auth_user', JSON.stringify(mockUser));
-      
-      dispatch({ type: 'LOGIN_SUCCESS', payload: mockUser });
+      if (error) {
+        throw error;
+      }
+
+      if (data.user) {
+        const user: User = {
+          id: data.user.id,
+          email: data.user.email || '',
+          name: data.user.user_metadata?.name || data.user.email || '',
+          role: data.user.user_metadata?.role || 'manager',
+          createdAt: data.user.created_at,
+        };
+        dispatch({ type: 'LOGIN_SUCCESS', payload: user });
+      }
     } catch (error) {
-      dispatch({ type: 'LOGIN_FAILURE', payload: 'Login failed' });
+      const errorMessage = error instanceof Error ? error.message : 'Login failed';
+      dispatch({ type: 'LOGIN_FAILURE', payload: errorMessage });
     }
   };
 
@@ -160,32 +178,44 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     dispatch({ type: 'LOGIN_START' });
     
     try {
-      // TODO: Implement Supabase signup
-      // const { data, error } = await supabase.auth.signUp(userData);
-      
-      // Mock implementation for now
-      const mockUser: User = {
-        id: '1',
+      const { data, error } = await supabase.auth.signUp({
         email: userData.email,
-        name: userData.name,
-        role: userData.role,
-        createdAt: new Date().toISOString(),
-      };
+        password: userData.password,
+        options: {
+          data: {
+            name: userData.name,
+            role: userData.role,
+          },
+        },
+      });
 
-      // Store token and user data
-      localStorage.setItem('auth_token', 'mock_token');
-      localStorage.setItem('auth_user', JSON.stringify(mockUser));
-      
-      dispatch({ type: 'LOGIN_SUCCESS', payload: mockUser });
+      if (error) {
+        throw error;
+      }
+
+      if (data.user) {
+        const user: User = {
+          id: data.user.id,
+          email: data.user.email || '',
+          name: data.user.user_metadata?.name || data.user.email || '',
+          role: data.user.user_metadata?.role || 'manager',
+          createdAt: data.user.created_at,
+        };
+        dispatch({ type: 'LOGIN_SUCCESS', payload: user });
+      }
     } catch (error) {
-      dispatch({ type: 'LOGIN_FAILURE', payload: 'Signup failed' });
+      const errorMessage = error instanceof Error ? error.message : 'Signup failed';
+      dispatch({ type: 'LOGIN_FAILURE', payload: errorMessage });
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('auth_user');
-    dispatch({ type: 'LOGOUT' });
+  const logout = async () => {
+    try {
+      await supabase.auth.signOut();
+      dispatch({ type: 'LOGOUT' });
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
   };
 
   const clearError = () => {
