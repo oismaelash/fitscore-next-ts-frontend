@@ -138,7 +138,7 @@ const jobsReducer = (state: JobsState, action: JobsAction): JobsState => {
 };
 
 interface JobsContextType extends JobsState {
-  fetchJobs: (page?: number, limit?: number) => Promise<void>;
+  fetchJobs: (page?: number, limit?: number, status?: string) => Promise<void>;
   createJob: (jobData: JobForm) => Promise<JobPosting | null>;
   updateJob: (id: string, jobData: Partial<JobForm>) => Promise<JobPosting | null>;
   deleteJob: (id: string) => Promise<boolean>;
@@ -164,94 +164,57 @@ interface JobsProviderProps {
 export const JobsProvider: React.FC<JobsProviderProps> = ({ children }) => {
   const [state, dispatch] = useReducer(jobsReducer, initialState);
 
-  const fetchJobs = async (page = 1, limit = 10) => {
+  const fetchJobs = async (page = 1, limit = 10, status?: string) => {
     dispatch({ type: 'FETCH_JOBS_START' });
     
     try {
-      // TODO: Implement API call
-      // const response = await fetch(`/api/jobs?page=${page}&limit=${limit}`);
-      // const data: PaginatedResponse<JobPosting> = await response.json();
+      let url = `/api/jobs?page=${page}&limit=${limit}`;
+      if (status) {
+        url += `&status=${status}`;
+      }
+
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
       
-      // Mock data for now
-      const mockJobs: JobPosting[] = [
-        {
-          id: '1',
-          title: 'Senior React Developer',
-          description: 'We are looking for a senior React developer with extensive experience in modern web development. The ideal candidate will have strong expertise in React, TypeScript, and Node.js, with a passion for creating high-quality, scalable applications.',
-          performance: {
-            experience: '5+ years',
-            deliveries: 'High quality code with comprehensive testing',
-            skills: ['React', 'TypeScript', 'Node.js', 'GraphQL', 'AWS'],
-          },
-          energy: {
-            availability: 'Full-time, remote-friendly',
-            deadlines: 'Flexible with clear communication',
-            pressure: 'Medium to high during sprints',
-          },
-          culture: {
-            legalValues: ['Innovation', 'Collaboration', 'Excellence'],
-          },
-          applicationLink: 'https://example.com/apply/1',
-          status: 'published',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
+      // Transform the data to match our frontend types
+      const transformedJobs: JobPosting[] = data.data.map((job: Record<string, unknown>) => ({
+        id: job.id as string,
+        title: job.title as string,
+        description: job.description as string,
+        performance: {
+          experience: (job.performance as any)?.experience || '',
+          deliveries: (job.performance as any)?.deliveries || '',
+          skills: (job.performance as any)?.skills || [],
         },
-        {
-          id: '2',
-          title: 'UI/UX Designer',
-          description: 'Join our design team to create beautiful and intuitive user experiences. We need someone who can translate complex requirements into elegant design solutions.',
-          performance: {
-            experience: '3+ years',
-            deliveries: 'User-centered design solutions',
-            skills: ['Figma', 'Adobe Creative Suite', 'User Research', 'Prototyping'],
-          },
-          energy: {
-            availability: 'Full-time, hybrid',
-            deadlines: 'Project-based with regular reviews',
-            pressure: 'Creative environment with deadlines',
-          },
-          culture: {
-            legalValues: ['Creativity', 'User-First', 'Collaboration'],
-          },
-          applicationLink: 'https://example.com/apply/2',
-          status: 'published',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
+        energy: {
+          availability: (job.energy as any)?.availability || '',
+          deadlines: (job.energy as any)?.deadlines || '',
+          pressure: (job.energy as any)?.pressure || '',
         },
-        {
-          id: '3',
-          title: 'Product Manager',
-          description: 'Lead product strategy and execution for our growing platform. Work closely with engineering, design, and business teams to deliver exceptional products.',
-          performance: {
-            experience: '4+ years',
-            deliveries: 'Successful product launches and iterations',
-            skills: ['Product Strategy', 'Agile', 'Data Analysis', 'Stakeholder Management'],
-          },
-          energy: {
-            availability: 'Full-time, flexible hours',
-            deadlines: 'Quarterly goals with weekly check-ins',
-            pressure: 'Strategic thinking with execution focus',
-          },
-          culture: {
-            legalValues: ['Leadership', 'Data-Driven', 'Customer Focus'],
-          },
-          applicationLink: 'https://example.com/apply/3',
-          status: 'draft',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
+        culture: {
+          legalValues: (job.culture as any)?.legalValues || [],
         },
-      ];
+        applicationLink: job.application_link as string,
+        status: job.status as 'draft' | 'published' | 'closed',
+        createdAt: job.created_at as string,
+        updatedAt: job.updated_at as string,
+      }));
 
       dispatch({
         type: 'FETCH_JOBS_SUCCESS',
         payload: {
-          jobs: mockJobs,
-          total: mockJobs.length,
-          page,
-          totalPages: 1,
+          jobs: transformedJobs,
+          total: data.pagination.total,
+          page: data.pagination.page,
+          totalPages: data.pagination.totalPages,
         },
       });
     } catch (error) {
+      console.error('Error fetching jobs:', error);
       dispatch({ type: 'FETCH_JOBS_FAILURE', payload: 'Failed to fetch jobs' });
     }
   };
@@ -260,28 +223,49 @@ export const JobsProvider: React.FC<JobsProviderProps> = ({ children }) => {
     dispatch({ type: 'CREATE_JOB_START' });
     
     try {
-      // TODO: Implement API call
-      // const response = await fetch('/api/jobs', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(jobData),
-      // });
-      // const data: ApiResponse<JobPosting> = await response.json();
+      const response = await fetch('/api/jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(jobData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create job');
+      }
+
+      const data = await response.json();
       
-      // Mock implementation
+      // Transform the response to match our frontend types
       const newJob: JobPosting = {
-        id: Date.now().toString(),
-        ...jobData,
-        applicationLink: `https://example.com/apply/${Date.now()}`,
-        status: 'draft',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        id: data.data.id as string,
+        title: data.data.title as string,
+        description: data.data.description as string,
+        performance: {
+          experience: (data.data.performance as any)?.experience || '',
+          deliveries: (data.data.performance as any)?.deliveries || '',
+          skills: (data.data.performance as any)?.skills || [],
+        },
+        energy: {
+          availability: (data.data.energy as any)?.availability || '',
+          deadlines: (data.data.energy as any)?.deadlines || '',
+          pressure: (data.data.energy as any)?.pressure || '',
+        },
+        culture: {
+          legalValues: (data.data.culture as any)?.legalValues || [],
+        },
+        applicationLink: data.data.application_link as string,
+        status: data.data.status as 'draft' | 'published' | 'closed',
+        createdAt: data.data.created_at as string,
+        updatedAt: data.data.updated_at as string,
       };
 
       dispatch({ type: 'CREATE_JOB_SUCCESS', payload: newJob });
       return newJob;
     } catch (error) {
-      dispatch({ type: 'CREATE_JOB_FAILURE', payload: 'Failed to create job' });
+      console.error('Error creating job:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create job';
+      dispatch({ type: 'CREATE_JOB_FAILURE', payload: errorMessage });
       return null;
     }
   };
@@ -290,25 +274,49 @@ export const JobsProvider: React.FC<JobsProviderProps> = ({ children }) => {
     dispatch({ type: 'UPDATE_JOB_START' });
     
     try {
-      // TODO: Implement API call
-      // const response = await fetch(`/api/jobs/${id}`, {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(jobData),
-      // });
-      // const data: ApiResponse<JobPosting> = await response.json();
+      const response = await fetch(`/api/jobs/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(jobData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update job');
+      }
+
+      const data = await response.json();
       
-      // Mock implementation
+      // Transform the response to match our frontend types
       const updatedJob: JobPosting = {
-        ...state.jobs.find(job => job.id === id)!,
-        ...jobData,
-        updatedAt: new Date().toISOString(),
+        id: data.data.id as string,
+        title: data.data.title as string,
+        description: data.data.description as string,
+        performance: {
+          experience: (data.data.performance as any)?.experience || '',
+          deliveries: (data.data.performance as any)?.deliveries || '',
+          skills: (data.data.performance as any)?.skills || [],
+        },
+        energy: {
+          availability: (data.data.energy as any)?.availability || '',
+          deadlines: (data.data.energy as any)?.deadlines || '',
+          pressure: (data.data.energy as any)?.pressure || '',
+        },
+        culture: {
+          legalValues: (data.data.culture as any)?.legalValues || [],
+        },
+        applicationLink: data.data.application_link as string,
+        status: data.data.status as 'draft' | 'published' | 'closed',
+        createdAt: data.data.created_at as string,
+        updatedAt: data.data.updated_at as string,
       };
 
       dispatch({ type: 'UPDATE_JOB_SUCCESS', payload: updatedJob });
       return updatedJob;
     } catch (error) {
-      dispatch({ type: 'UPDATE_JOB_FAILURE', payload: 'Failed to update job' });
+      console.error('Error updating job:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update job';
+      dispatch({ type: 'UPDATE_JOB_FAILURE', payload: errorMessage });
       return null;
     }
   };
@@ -317,27 +325,65 @@ export const JobsProvider: React.FC<JobsProviderProps> = ({ children }) => {
     dispatch({ type: 'DELETE_JOB_START' });
     
     try {
-      // TODO: Implement API call
-      // const response = await fetch(`/api/jobs/${id}`, { method: 'DELETE' });
-      
+      const response = await fetch(`/api/jobs/${id}`, { 
+        method: 'DELETE' 
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete job');
+      }
+
       dispatch({ type: 'DELETE_JOB_SUCCESS', payload: id });
       return true;
     } catch (error) {
-      dispatch({ type: 'DELETE_JOB_FAILURE', payload: 'Failed to delete job' });
+      console.error('Error deleting job:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete job';
+      dispatch({ type: 'DELETE_JOB_FAILURE', payload: errorMessage });
       return false;
     }
   };
 
   const getJobById = async (id: string): Promise<JobPosting | null> => {
     try {
-      // TODO: Implement API call
-      // const response = await fetch(`/api/jobs/${id}`);
-      // const data: ApiResponse<JobPosting> = await response.json();
+      const response = await fetch(`/api/jobs/${id}`);
       
-      // Mock implementation
-      const job = state.jobs.find(job => job.id === id) || null;
+      if (!response.ok) {
+        if (response.status === 404) {
+          return null;
+        }
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // Transform the response to match our frontend types
+      const job: JobPosting = {
+        id: data.data.id as string,
+        title: data.data.title as string,
+        description: data.data.description as string,
+        performance: {
+          experience: (data.data.performance as any)?.experience || '',
+          deliveries: (data.data.performance as any)?.deliveries || '',
+          skills: (data.data.performance as any)?.skills || [],
+        },
+        energy: {
+          availability: (data.data.energy as any)?.availability || '',
+          deadlines: (data.data.energy as any)?.deadlines || '',
+          pressure: (data.data.energy as any)?.pressure || '',
+        },
+        culture: {
+          legalValues: (data.data.culture as any)?.legalValues || [],
+        },
+        applicationLink: data.data.application_link as string,
+        status: data.data.status as 'draft' | 'published' | 'closed',
+        createdAt: data.data.created_at as string,
+        updatedAt: data.data.updated_at as string,
+      };
+
       return job;
     } catch (error) {
+      console.error('Error fetching job by ID:', error);
       return null;
     }
   };

@@ -1,15 +1,18 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useParams } from 'next/navigation';
 import { useJobs } from '@/contexts/JobsContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { JobForm } from '@/types';
+import { JobForm, JobPosting } from '@/types';
 
-export default function CreateJobPage() {
+export default function EditJobPage() {
   const router = useRouter();
+  const params = useParams();
+  const jobId = params.id as string;
+  
   const { user, isAuthenticated } = useAuth();
-  const { createJob, isLoading } = useJobs();
+  const { getJobById, updateJob, isLoading, error, clearError } = useJobs();
   
   const [formData, setFormData] = useState<JobForm>({
     title: '',
@@ -31,22 +34,74 @@ export default function CreateJobPage() {
 
   const [skillInput, setSkillInput] = useState('');
   const [valueInput, setValueInput] = useState('');
+  const [isLoadingJob, setIsLoadingJob] = useState(true);
+  const [job, setJob] = useState<JobPosting | null>(null);
+
+  useEffect(() => {
+    const loadJob = async () => {
+      if (jobId) {
+        const jobData = await getJobById(jobId);
+        if (jobData) {
+          setJob(jobData);
+          setFormData({
+            title: jobData.title,
+            description: jobData.description,
+            performance: jobData.performance,
+            energy: jobData.energy,
+            culture: jobData.culture,
+          });
+        } else {
+          router.push('/jobs');
+        }
+        setIsLoadingJob(false);
+      }
+    };
+
+    loadJob();
+  }, [jobId, getJobById, router]);
 
   if (!isAuthenticated) {
     router.push('/login');
     return null;
   }
 
+  if (isLoadingJob) {
+    return (
+      <div className="min-h-screen bg-light flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-dark">Loading job...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!job) {
+    return (
+      <div className="min-h-screen bg-light flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-xl font-semibold text-dark mb-4">Job not found</h2>
+          <button
+            onClick={() => router.push('/jobs')}
+            className="bg-primary text-white px-4 py-2 rounded hover:bg-secondary transition-colors"
+          >
+            Back to Jobs
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     try {
-      const newJob = await createJob(formData);
-      if (newJob) {
-        router.push('/jobs');
+      const updatedJob = await updateJob(jobId, formData);
+      if (updatedJob) {
+        router.push(`/jobs/${jobId}`);
       }
     } catch (error) {
-      console.error('Failed to create job:', error);
+      console.error('Failed to update job:', error);
     }
   };
 
@@ -145,23 +200,40 @@ export default function CreateJobPage() {
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center space-x-4">
               <button
-                onClick={() => router.push('/jobs')}
+                onClick={() => router.push(`/jobs/${jobId}`)}
                 className="text-primary hover:text-secondary transition-colors"
               >
-                ← Back to Jobs
+                ← Back to Job Details
               </button>
-              <h1 className="text-2xl font-bold text-dark">Create New Job</h1>
+              <h1 className="text-2xl font-bold text-dark">Edit Job Posting</h1>
             </div>
-            <span className="text-dark">Welcome, {user?.name}</span>
+            <div className="flex items-center space-x-4">
+              <span className="text-dark">Welcome, {user?.name}</span>
+            </div>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Error Display */}
+        {error && (
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex justify-between items-center">
+              <p className="text-red-800">{error}</p>
+              <button
+                onClick={clearError}
+                className="text-red-600 hover:text-red-800"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Basic Information */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-dark mb-4">Basic Information</h2>
             
             <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
@@ -171,7 +243,7 @@ export default function CreateJobPage() {
                 </svg>
                 <div>
                   <p className="text-sm text-blue-800">
-                    <strong>Application Link:</strong> An application link will be automatically generated for this job posting once it's created. You can share this link with candidates to apply for the position.
+                    <strong>Application Link:</strong> The application link for this job posting is automatically generated and cannot be edited. You can view and copy the link from the job details page.
                   </p>
                 </div>
               </div>
@@ -179,32 +251,34 @@ export default function CreateJobPage() {
             
             <div className="space-y-4">
               <div>
-                <label htmlFor="title" className="block text-sm font-medium text-dark mb-1">
+                <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
                   Job Title *
                 </label>
                 <input
                   type="text"
                   id="title"
                   name="title"
-                  required
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
                   value={formData.title}
                   onChange={handleInputChange}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="e.g., Senior React Developer"
                 />
               </div>
 
               <div>
-                <label htmlFor="description" className="block text-sm font-medium text-dark mb-1">
+                <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
                   Job Description *
                 </label>
                 <textarea
                   id="description"
                   name="description"
-                  required
-                  rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
                   value={formData.description}
                   onChange={handleInputChange}
+                  required
+                  rows={6}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="Describe the role, responsibilities, and requirements..."
                 />
               </div>
 
@@ -212,53 +286,53 @@ export default function CreateJobPage() {
             </div>
           </div>
 
-          {/* Performance Requirements */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-dark mb-4">Performance Requirements</h2>
+          {/* Performance Expectations */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold text-dark mb-4">Performance Expectations</h2>
             
             <div className="space-y-4">
               <div>
-                <label htmlFor="experience" className="block text-sm font-medium text-dark mb-1">
-                  Experience Level
+                <label htmlFor="performance.experience" className="block text-sm font-medium text-gray-700 mb-1">
+                  Experience Requirements
                 </label>
                 <input
                   type="text"
-                  id="experience"
+                  id="performance.experience"
                   name="performance.experience"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
-                  placeholder="e.g., 5+ years"
                   value={formData.performance.experience}
                   onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="e.g., 5+ years of experience"
                 />
               </div>
 
               <div>
-                <label htmlFor="deliveries" className="block text-sm font-medium text-dark mb-1">
+                <label htmlFor="performance.deliveries" className="block text-sm font-medium text-gray-700 mb-1">
                   Expected Deliverables
                 </label>
-                <input
-                  type="text"
-                  id="deliveries"
+                <textarea
+                  id="performance.deliveries"
                   name="performance.deliveries"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
-                  placeholder="e.g., High quality code, documentation"
                   value={formData.performance.deliveries}
                   onChange={handleInputChange}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="What will this person be expected to deliver?"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-dark mb-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Required Skills
                 </label>
                 <div className="flex space-x-2 mb-2">
                   <input
                     type="text"
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
-                    placeholder="Add a skill"
                     value={skillInput}
                     onChange={(e) => setSkillInput(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addSkill())}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                    placeholder="Add a skill"
                   />
                   <button
                     type="button"
@@ -272,13 +346,13 @@ export default function CreateJobPage() {
                   {formData.performance.skills.map((skill, index) => (
                     <span
                       key={index}
-                      className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm flex items-center"
+                      className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-primary text-white"
                     >
                       {skill}
                       <button
                         type="button"
                         onClick={() => removeSkill(index)}
-                        className="ml-2 text-primary hover:text-red-600"
+                        className="ml-2 text-white hover:text-gray-200"
                       >
                         ×
                       </button>
@@ -289,84 +363,74 @@ export default function CreateJobPage() {
             </div>
           </div>
 
-          {/* Energy Requirements */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <h2 className="text-lg font-semibold text-dark mb-4">Energy Requirements</h2>
+          {/* Energy & Work Environment */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold text-dark mb-4">Energy & Work Environment</h2>
             
             <div className="space-y-4">
               <div>
-                <label htmlFor="availability" className="block text-sm font-medium text-dark mb-1">
-                  Availability
+                <label htmlFor="energy.availability" className="block text-sm font-medium text-gray-700 mb-1">
+                  Availability Requirements
                 </label>
-                <select
-                  id="availability"
+                <input
+                  type="text"
+                  id="energy.availability"
                   name="energy.availability"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
                   value={formData.energy.availability}
                   onChange={handleInputChange}
-                >
-                  <option value="">Select availability</option>
-                  <option value="Full-time">Full-time</option>
-                  <option value="Part-time">Part-time</option>
-                  <option value="Contract">Contract</option>
-                  <option value="Remote">Remote</option>
-                </select>
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="e.g., Full-time, remote-friendly"
+                />
               </div>
 
               <div>
-                <label htmlFor="deadlines" className="block text-sm font-medium text-dark mb-1">
+                <label htmlFor="energy.deadlines" className="block text-sm font-medium text-gray-700 mb-1">
                   Deadline Expectations
                 </label>
-                <select
-                  id="deadlines"
+                <input
+                  type="text"
+                  id="energy.deadlines"
                   name="energy.deadlines"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
                   value={formData.energy.deadlines}
                   onChange={handleInputChange}
-                >
-                  <option value="">Select deadline style</option>
-                  <option value="Flexible">Flexible</option>
-                  <option value="Strict">Strict</option>
-                  <option value="Project-based">Project-based</option>
-                </select>
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="e.g., Flexible with clear communication"
+                />
               </div>
 
               <div>
-                <label htmlFor="pressure" className="block text-sm font-medium text-dark mb-1">
-                  Work Pressure
+                <label htmlFor="energy.pressure" className="block text-sm font-medium text-gray-700 mb-1">
+                  Work Pressure Level
                 </label>
-                <select
-                  id="pressure"
+                <input
+                  type="text"
+                  id="energy.pressure"
                   name="energy.pressure"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
                   value={formData.energy.pressure}
                   onChange={handleInputChange}
-                >
-                  <option value="">Select pressure level</option>
-                  <option value="Low">Low</option>
-                  <option value="Medium">Medium</option>
-                  <option value="High">High</option>
-                </select>
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="e.g., Medium to high during sprints"
+                />
               </div>
             </div>
           </div>
 
           {/* Cultural Values */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-dark mb-4">Cultural Values</h2>
             
             <div>
-              <label className="block text-sm font-medium text-dark mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Company Values
               </label>
               <div className="flex space-x-2 mb-2">
                 <input
                   type="text"
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-primary focus:border-primary"
-                  placeholder="Add a company value"
                   value={valueInput}
                   onChange={(e) => setValueInput(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addValue())}
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                  placeholder="Add a company value"
                 />
                 <button
                   type="button"
@@ -380,13 +444,13 @@ export default function CreateJobPage() {
                 {formData.culture.legalValues.map((value, index) => (
                   <span
                     key={index}
-                    className="px-3 py-1 bg-accent/10 text-accent rounded-full text-sm flex items-center"
+                    className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-secondary text-white"
                   >
                     {value}
                     <button
                       type="button"
                       onClick={() => removeValue(index)}
-                      className="ml-2 text-accent hover:text-red-600"
+                      className="ml-2 text-white hover:text-gray-200"
                     >
                       ×
                     </button>
@@ -396,21 +460,21 @@ export default function CreateJobPage() {
             </div>
           </div>
 
-          {/* Submit */}
+          {/* Form Actions */}
           <div className="flex justify-end space-x-4">
             <button
               type="button"
-              onClick={() => router.push('/jobs')}
-              className="px-6 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+              onClick={() => router.push(`/jobs/${jobId}`)}
+              className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isLoading}
-              className="px-6 py-2 bg-primary text-white rounded-md hover:bg-secondary transition-colors disabled:opacity-50"
+              className="px-6 py-2 bg-primary text-white rounded-md hover:bg-secondary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isLoading ? 'Creating...' : 'Create Job'}
+              {isLoading ? 'Updating...' : 'Update Job'}
             </button>
           </div>
         </form>

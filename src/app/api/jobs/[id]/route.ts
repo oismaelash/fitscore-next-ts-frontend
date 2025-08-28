@@ -5,10 +5,10 @@ import { JobUpdate } from '@/lib/supabase';
 // GET /api/jobs/[id] - Get a specific job by ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     const { data: job, error } = await supabase
       .from('jobs')
@@ -44,10 +44,10 @@ export async function GET(
 // PUT /api/jobs/[id] - Update a specific job
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const body = await request.json();
 
     // Check if job exists
@@ -109,10 +109,10 @@ export async function PUT(
 // DELETE /api/jobs/[id] - Delete a specific job
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
 
     // Check if job exists
     const { data: existingJob, error: fetchError } = await supabase

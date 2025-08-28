@@ -53,7 +53,7 @@ export interface Database {
           culture: {
             legalValues: string[];
           };
-          application_link: string;
+          application_link?: string; // Optional during insert, will be generated after
           status?: 'draft' | 'published' | 'closed';
           created_at?: string;
           updated_at?: string;

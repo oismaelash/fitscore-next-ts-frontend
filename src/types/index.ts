@@ -117,6 +117,7 @@ export interface JobForm {
   culture: {
     legalValues: string[];
   };
+  applicationLink?: string; // Optional - will be generated automatically
 }
 
 export interface CandidateForm {

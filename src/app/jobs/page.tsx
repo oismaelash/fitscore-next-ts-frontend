@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useJobs } from '@/contexts/JobsContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,7 +11,14 @@ import { JobPosting } from '@/types';
 export default function JobsPage() {
   const router = useRouter();
   const { user, logout } = useAuth();
-  const { jobs, isLoading, deleteJob } = useJobs();
+  const { jobs, isLoading, error, totalJobs, currentPage, totalPages, fetchJobs, deleteJob, clearError } = useJobs();
+  
+  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [searchTerm, setSearchTerm] = useState<string>('');
+
+  useEffect(() => {
+    fetchJobs(1, 10, statusFilter || undefined);
+  }, [statusFilter]);
 
   const handleViewDetails = (job: JobPosting) => {
     router.push(`/jobs/${job.id}`);
@@ -23,13 +30,37 @@ export default function JobsPage() {
 
   const handleDelete = async (jobId: string) => {
     if (confirm('Are you sure you want to delete this job posting?')) {
-      await deleteJob(jobId);
+      const success = await deleteJob(jobId);
+      if (success) {
+        // Refresh the jobs list
+        fetchJobs(currentPage, 10, statusFilter || undefined);
+      }
     }
   };
 
   const handleCreateJob = () => {
     router.push('/jobs/create');
   };
+
+  const handleStatusFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setStatusFilter(e.target.value);
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    // For now, we'll just filter client-side
+    // In a real app, you'd want to implement server-side search
+  };
+
+  const handlePageChange = (page: number) => {
+    fetchJobs(page, 10, statusFilter || undefined);
+  };
+
+  const filteredJobs = jobs.filter(job => 
+    searchTerm === '' || 
+    job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    job.description.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <AuthGuard>
@@ -68,6 +99,21 @@ export default function JobsPage() {
 
         {/* Main Content */}
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Error Display */}
+          {error && (
+            <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex justify-between items-center">
+                <p className="text-red-800">{error}</p>
+                <button
+                  onClick={clearError}
+                  className="text-red-600 hover:text-red-800"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          )}
+
           {isLoading ? (
             <div className="text-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
@@ -88,25 +134,39 @@ export default function JobsPage() {
             <div className="space-y-6">
               <div className="flex justify-between items-center">
                 <h2 className="text-xl font-semibold text-dark">
-                  All Job Postings ({jobs.length})
+                  All Job Postings ({totalJobs})
                 </h2>
                 <div className="flex space-x-2">
-                  <select className="border border-gray-300 rounded px-3 py-1 text-sm">
-                    <option>All Status</option>
-                    <option>Published</option>
-                    <option>Draft</option>
-                    <option>Closed</option>
-                  </select>
-                  <input
-                    type="text"
-                    placeholder="Search jobs..."
+                  <select 
+                    value={statusFilter}
+                    onChange={handleStatusFilterChange}
                     className="border border-gray-300 rounded px-3 py-1 text-sm"
-                  />
+                  >
+                    <option value="">All Status</option>
+                    <option value="published">Published</option>
+                    <option value="draft">Draft</option>
+                    <option value="closed">Closed</option>
+                  </select>
+                  <form onSubmit={handleSearch} className="flex">
+                    <input
+                      type="text"
+                      placeholder="Search jobs..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="border border-gray-300 rounded px-3 py-1 text-sm"
+                    />
+                    <button
+                      type="submit"
+                      className="ml-2 bg-primary text-white px-3 py-1 rounded text-sm hover:bg-secondary transition-colors"
+                    >
+                      Search
+                    </button>
+                  </form>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {jobs.map((job) => (
+                {filteredJobs.map((job) => (
                   <JobCard
                     key={job.id}
                     job={job}
@@ -116,6 +176,41 @@ export default function JobsPage() {
                   />
                 ))}
               </div>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex justify-center items-center space-x-2 mt-8">
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="px-3 py-2 border border-gray-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                  >
+                    Previous
+                  </button>
+                  
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                    <button
+                      key={page}
+                      onClick={() => handlePageChange(page)}
+                      className={`px-3 py-2 border rounded text-sm ${
+                        page === currentPage
+                          ? 'bg-primary text-white border-primary'
+                          : 'border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  ))}
+                  
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-2 border border-gray-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </main>

@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     
     // Validate required fields
-    const requiredFields = ['title', 'description', 'performance', 'energy', 'culture', 'applicationLink'];
+    const requiredFields = ['title', 'description', 'performance', 'energy', 'culture'];
     for (const field of requiredFields) {
       if (!body[field]) {
         return NextResponse.json(
@@ -79,7 +79,6 @@ export async function POST(request: NextRequest) {
       performance: body.performance,
       energy: body.energy,
       culture: body.culture,
-      application_link: body.applicationLink,
       status: body.status || 'draft'
     };
 
@@ -96,6 +95,25 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // Generate application link after job is created
+    const applicationLink = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/apply/${job.id}`;
+    
+    // Update the job with the generated application link
+    const { data: updatedJob, error: updateError } = await supabase
+      .from('jobs')
+      .update({ application_link: applicationLink })
+      .eq('id', job.id)
+      .select()
+      .single();
+
+    if (updateError) {
+      console.error('Error updating job with application link:', updateError);
+      // Don't fail the request, just log the error
+    }
+
+    // Return the updated job with the application link
+    const finalJob = updateError ? job : updatedJob;
 
     return NextResponse.json({
       data: job,
